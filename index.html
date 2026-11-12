@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>БезЛактозы — помощник при непереносимости лактозы</title>
+<meta name="description" content="Проверка продуктов на скрытую лактозу, дневник симптомов, калькулятор фермента. Информационное приложение, не заменяет консультацию врача.">
+<style>
+:root{
+  --primary:#3EB489; --primary-dark:#2E8B6E; --bg:#F4FAF7; --card:#FFFFFF;
+  --text:#2E2E2E; --sub:#8A8A8A; --border:#E3EEE9;
+  --lvl0:#7BC96F; --lvl1:#E8D44D; --lvl2:#F0A03C; --lvl3:#E2574C;
+  --radius:12px; --shadow:0 1px 3px rgba(46,139,110,.08);
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); color:var(--text); line-height:1.45;
+  max-width:480px; margin:0 auto; min-height:100vh;
+  padding-bottom:84px;
+}
+button,input,textarea,select{font:inherit; color:inherit;}
+svg{display:block;}
+
+/* ---------- header ---------- */
+.hdr{padding:20px 20px 8px;}
+.hdr h1{font-size:22px; font-weight:600;}
+.hdr p{color:var(--sub); font-size:13px; margin-top:2px;}
+
+/* ---------- nav ---------- */
+.nav{
+  position:fixed; bottom:0; left:0; right:0; z-index:50;
+  max-width:480px; margin:0 auto;
+  display:flex; background:var(--card);
+  border-top:1px solid var(--border);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.nav button{
+  flex:1; border:none; background:none; cursor:pointer;
+  padding:10px 0 8px; display:flex; flex-direction:column; align-items:center; gap:4px;
+  color:var(--sub); font-size:10px;
+}
+.nav button .ind{width:16px; height:2px; border-radius:2px; background:transparent; margin-top:2px;}
+.nav button.on{color:var(--primary-dark); font-weight:500;}
+.nav button.on .ind{background:var(--primary);}
+
+/* ---------- screens ---------- */
+.screen{display:none; padding:8px 16px 24px; animation:fade .18s ease-out;}
+.screen.on{display:block;}
+@keyframes fade{from{opacity:0; transform:translateY(4px);}to{opacity:1; transform:none;}}
+
+.card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow); margin-bottom:12px;}
+.card h3{font-size:16px; font-weight:600; margin-bottom:8px;}
+.muted{color:var(--sub); font-size:13px;}
+.sec{font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--sub); margin:18px 4px 8px;}
+
+/* status dot */
+.dot{width:10px; height:10px; border-radius:50%; flex-shrink:0;}
+.dot0{background:var(--lvl0);} .dot1{background:var(--lvl1);} .dot2{background:var(--lvl2);} .dot3{background:var(--lvl3);}
+.lvl-name{font-size:11px; padding:2px 8px; border-radius:999px; font-weight:500; white-space:nowrap;}
+.lvl0{background:#EAF7E7; color:#3E7D33;} .lvl1{background:#FBF6D8; color:#8A7A12;}
+.lvl2{background:#FCEFDC; color:#9A5B11;} .lvl3{background:#FBE3E1; color:#B33A30;}
+
+/* search */
+.search-row{display:flex; gap:8px; margin-bottom:12px;}
+.search-bar{flex:1; display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:0 12px;}
+.search-bar input{border:none; outline:none; background:none; flex:1; padding:12px 0; font-size:15px;}
+.icon-btn{width:46px; border:none; border-radius:10px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;}
+.icon-btn.ghost{background:var(--card); border:1px solid var(--border); color:var(--primary-dark); width:auto; padding:0 14px; font-size:13px;}
+
+/* product list */
+.prod{display:flex; align-items:flex-start; gap:10px;}
+.prod .grow{flex:1; min-width:0;}
+.prod-name{font-size:15px; font-weight:500;}
+.prod-meta{font-size:12px; color:var(--sub); margin-top:2px;}
+.hidden-tag{display:inline-flex; align-items:center; gap:5px; margin-top:8px; font-size:12px; padding:3px 9px; border-radius:6px; background:#FBE3E1; color:#B33A30;}
+.empty{text-align:center; color:var(--sub); padding:24px 8px; font-size:14px;}
+
+/* chips */
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;}
+.chip{border:1px solid var(--border); background:var(--card); border-radius:999px; padding:8px 16px; font-size:14px; cursor:pointer; transition:all .15s ease-out;}
+.chip.sel{background:var(--primary); border-color:var(--primary); color:#fff;}
+.btn{width:100%; border:none; border-radius:10px; background:var(--primary); color:#fff; padding:13px; font-size:15px; font-weight:500; cursor:pointer; margin-bottom:12px;}
+.btn:active{background:var(--primary-dark);}
+.btn.ghost{background:var(--card); color:var(--primary-dark); border:1px solid var(--border);}
+
+.entry{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 2px; border-bottom:1px solid var(--border); font-size:14px;}
+.entry:last-child{border-bottom:none;}
+.entry .tm{font-size:12px; color:var(--sub); white-space:nowrap; font-variant-numeric:tabular-nums;}
+.entry .del{border:none; background:none; color:var(--sub); cursor:pointer; font-size:16px; padding:4px; opacity:.4;}
+.entry .del:hover{opacity:1; color:var(--lvl3);}
+
+textarea{width:100%; border:1px solid var(--border); border-radius:10px; padding:12px; font-size:14px; resize:vertical; min-height:90px; outline:none; background:var(--card);}
+textarea:focus{border-color:var(--primary);}
+.found-word{display:inline-block; background:#FBE3E1; color:#B33A30; border-radius:4px; padding:0 3px; font-weight:500;}
+.ok-line{color:#3E7D33; font-size:13px; display:flex; align-items:center; gap:6px; margin-top:8px;}
+
+/* calculator */
+input[type=range]{width:100%; accent-color:var(--primary); margin:8px 0;}
+.calc-num{font-size:44px; font-weight:600; color:var(--primary-dark); text-align:center; margin:6px 0 2px; font-variant-numeric:tabular-nums; line-height:1.1;}
+.calc-lbl{text-align:center; font-size:14px; margin-bottom:16px;}
+
+/* scanner */
+#scanViewport{position:relative; width:100%; height:220px; background:#1c2b26; border-radius:10px; overflow:hidden; margin-bottom:10px;}
+#scanViewport video,#scanViewport canvas{width:100%; height:100%; object-fit:cover; display:block;}
+#scanViewport .laser{position:absolute; left:10%; right:10%; top:50%; height:2px; background:var(--lvl3); box-shadow:0 0 8px var(--lvl3); opacity:.9;}
+#scanViewport .hint{position:absolute; bottom:8px; left:0; right:0; text-align:center; color:#fff; font-size:12px; text-shadow:0 1px 2px rgba(0,0,0,.6);}
+.scan-off{display:flex; align-items:center; justify-content:center; height:100%; color:#9fb8ae; font-size:13px; text-align:center; padding:16px;}
+.manual-row{display:flex; gap:8px; margin-top:10px;}
+.manual-row input{flex:1; border:1px solid var(--border); border-radius:10px; padding:11px 12px; font-size:15px; outline:none; min-width:0;}
+input:focus,textarea:focus{border-color:var(--primary);}
+/* diary entries */
+.badge{display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; font-weight:500; margin-top:3px;}
+.badge-ok{background:#EAF7E7; color:#3E7D33;}
+.badge-hot{background:#FBE3E1; color:#B33A30;}
+.entry{position:relative;}
+.entry-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:6px;}
+.ed-ok{background:var(--lvl0);}
+.ed-hot{background:var(--lvl3);}
+.day-header{font-size:12px; font-weight:500; color:var(--sub); text-transform:capitalize; padding:10px 2px 2px;}
+
+/* chart */
+.chart-wrap{display:flex; align-items:flex-end; gap:6px; height:120px; padding:12px 4px 0;}
+.chart-col{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end;}
+.chart-bar{width:100%; max-width:34px; border-radius:6px 6px 3px 3px; background:var(--primary); min-height:3px; transition:height .3s ease-out;}
+.chart-bar.hot{background:var(--lvl3);}
+.chart-day{font-size:10px; color:var(--sub);}
+.chart-val{font-size:10px; color:var(--sub); font-variant-numeric:tabular-nums;}
+
+/* stats */
+.stat{display:flex; align-items:center; gap:12px;}
+.stat .ic{width:40px; height:40px; border-radius:10px; background:#E4F4ED; color:var(--primary-dark); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.stat-num{font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1.15;}
+.stat-lbl{font-size:12px; color:var(--sub);}
+
+.qa-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+.qa{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 6px; text-align:center; cursor:pointer;}
+.qa .ic{width:34px; height:34px; margin:0 auto 6px; border-radius:8px; background:#E4F4ED; color:var(--primary-dark); display:flex; align-items:center; justify-content:center;}
+.qa span{font-size:12px;}
+
+.disc{font-size:11px; color:var(--sub); line-height:1.55; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; gap:8px; margin-top:16px;}
+.lang-row{display:flex; gap:8px; margin-bottom:10px;}
+.lang-row button{flex:1; border:1px solid var(--border); background:var(--card); border-radius:8px; padding:8px; cursor:pointer; font-size:13px;}
+.lang-row button.sel{background:var(--primary); border-color:var(--primary); color:#fff;}
+.card-text{background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:13px; line-height:1.6; margin-bottom:10px; white-space:pre-line;}
+.alt{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); font-size:14px;}
+.alt:last-child{border-bottom:none;}
+.alt .grow{flex:1;}
+@media (min-width:480px){ body{border-left:1px solid var(--border); border-right:1px solid var(--border);} }
+</style>
+</head>
+<body>
+
+<!-- ==================== ГЛАВНАЯ ==================== -->
+<section class="screen on" id="s-home">
+  <div class="hdr"><h1>Привет</h1><p id="todayDate"></p></div>
+
+  <div class="card">
+    <div class="stat">
+      <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 3.08c.55 0 1 .45 1 1v13.95h14.99l.1.01c.5.05.9.48.9 1s-.4.94-.9.99l-.1.01H5a2 2 0 0 1-2-2V4.08c0-.55.45-1 1-1Zm14.26 3.43c.37-.41 1-.45 1.41-.08.41.37.45 1 .08 1.41l-3.88 4.33a1.8 1.8 0 0 1-2.75.22l-2.2-1.8-3.46 4.06a1 1 0 0 1-1.52-1.3l3.46-4.06a1.8 1.8 0 0 1 2.79-.25l2.2 1.8 3.87-4.33Z" fill="currentColor"/></svg></div>
+      <div><div class="stat-num" id="statLine">0 записей · 0 реакций</div><div class="stat-lbl" id="statThreshold">Порог переносимости: ~10 г лактозы</div></div>
+    </div>
+  </div>
+
+  <div class="search-row">
+    <div class="search-bar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:var(--sub);flex-shrink:0;"><path d="M11.5 3a8.5 8.5 0 1 1-5.39 15.06L2.86 21.14a1 1 0 0 1-1.41-1.41l3.07-3.07A8.5 8.5 0 0 1 11.5 3Zm0 1.8a6.7 6.7 0 1 0 0 13.4 6.7 6.7 0 0 0 0-13.4Z" fill="currentColor"/></svg>
+      <input id="homeSearch" placeholder="Проверить продукт…" autocomplete="off">
+    </div>
+    <button class="icon-btn" id="homeScan" title="Проверить состав этикетки">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M8.01 7.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M17.9 4.1c2.15 0 3.9 1.75 3.9 3.9v8c0 2.15-1.75 3.9-3.9 3.9H5.9A3.9 3.9 0 0 1 2 16V8c0-2.15 1.75-3.9 3.9-3.9h12ZM5.9 5.9A2.1 2.1 0 0 0 3.8 8v6l1.93-1.58a2 2 0 0 1 2.47.08l2.15 2.01c.04.04.1.03.14 0l3.62-3.55a2.1 2.1 0 0 1 2.95-.04L20 13.96V8c0-1.16-.94-2.1-2.1-2.1H5.9Z" fill="currentColor"/></svg>
+    </button>
+  </div>
+
+  <p class="sec">Быстрый доступ</p>
+  <div class="qa-grid">
+    <div class="qa" data-go="s-diary"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.1 6c0-.5.4-.9.9-.9h14c.5 0 .9.4.9.9s-.4.9-.9.9H5a.9.9 0 0 1-.9-.9Zm0 6c0-.5.4-.9.9-.9h14c.5 0 .9.4.9.9s-.4.9-.9.9H5a.9.9 0 0 1-.9-.9Zm0 6c0-.5.4-.9.9-.9h14c.5 0 .9.4.9.9s-.4.9-.9.9H5a.9.9 0 0 1-.9-.9Z" fill="currentColor"/></svg></div><span>Дневник</span></div>
+    <div class="qa" data-go="s-calc"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10.24 6.2c.47-2.4 3.65-2.97 4.92-.87a.9.9 0 0 1-1.54.93c-.41-.69-1.45-.5-1.61.28l-.38 1.97h1.71a.9.9 0 0 1 0 1.8h-2.06l-1.42 7.27c-.6 3.07-4.94 3.23-5.76.2a.9.9 0 1 1 1.74-.47c.32 1.18 2.02 1.12 2.26-.09l1.35-6.91H7.7a.9.9 0 0 1 0-1.8h2.09l.45-2.31Zm6.98 6.55a.9.9 0 0 1 1.27 1.27l-1.62 1.63 1.62 1.62a.9.9 0 1 1-1.27 1.27l-1.63-1.62-1.62 1.62a.9.9 0 1 1-1.27-1.27l1.62-1.62-1.62-1.63a.9.9 0 0 1 1.27-1.27l1.62 1.63 1.63-1.63Z" fill="currentColor"/></svg></div><span>Калькулятор</span></div>
+    <div class="qa" data-go="s-prod"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19.3 5.9a1 1 0 0 1 1.41 1.42l-10.9 10.92a1 1 0 0 1-1.42 0L3.42 13.13a1 1 0 1 1 1.41-1.41l4.33 4.33L19.3 5.9Z" fill="currentColor"/></svg></div><span>Спокойно</span></div>
+  </div>
+
+  <p class="sec">Легенда уровней</p>
+  <div class="card" style="padding:12px 14px;">
+    <div class="prod" style="margin-bottom:8px;"><span class="dot dot0"></span><div class="grow"><div class="prod-name" style="font-size:14px;">Без лактозы</div><div class="prod-meta">0–0,1 г/100 г · можно свободно</div></div></div>
+    <div class="prod" style="margin-bottom:8px;"><span class="dot dot1"></span><div class="grow"><div class="prod-name" style="font-size:14px;">Низкий</div><div class="prod-meta">до 2 г · обычно переносится</div></div></div>
+    <div class="prod" style="margin-bottom:8px;"><span class="dot dot2"></span><div class="grow"><div class="prod-name" style="font-size:14px;">Средний</div><div class="prod-meta">2–5 г · зависит от порога</div></div></div>
+    <div class="prod"><span class="dot dot3"></span><div class="grow"><div class="prod-name" style="font-size:14px;">Высокий</div><div class="prod-meta">более 5 г · риск реакции</div></div></div>
+  </div>
+
+  <p class="sec">Последние записи</p>
+  <div class="card" id="homeEntries"><div class="empty">Пока пусто — добавь первую запись во вкладке «Дневник»</div></div>
+
+  <div class="disc">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M12 2.1a9.9 9.9 0 1 1 0 19.8 9.9 9.9 0 0 1 0-19.8Zm0 7.4c.5 0 .9.37.9.83v6.35a.9.9 0 0 1-1.8 0V10.33c0-.46.4-.83.9-.83Z" fill="currentColor"/></svg>
+    <span>Информация носит справочный характер и не заменяет консультацию врача. Уровни лактозы — усреднённые значения, всегда читай состав на этикетке.</span>
+  </div>
+</section>
+
+<!-- ==================== ПРОДУКТЫ ==================== -->
+<section class="screen" id="s-prod">
+  <div class="hdr"><h1>Проверка продукта</h1><p>Поиск по базе и анализ состава</p></div>
+
+  <div class="lang-row">
+    <button id="tabSearch" class="sel">Поиск по базе</button>
+    <button id="tabLabel">Состав этикетки</button>
+    <button id="tabScan">Сканер</button>
+  </div>
+
+  <div id="prodSearchView">
+    <div class="search-row">
+      <div class="search-bar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:var(--sub);flex-shrink:0;"><path d="M11.5 3a8.5 8.5 0 1 1-5.39 15.06L2.86 21.14a1 1 0 0 1-1.41-1.41l3.07-3.07A8.5 8.5 0 0 1 11.5 3Zm0 1.8a6.7 6.7 0 1 0 0 13.4 6.7 6.7 0 0 0 0-13.4Z" fill="currentColor"/></svg>
+        <input id="prodQuery" placeholder="Какао, сыр, хлеб…" autocomplete="off">
+      </div>
+    </div>
+    <div id="prodList"></div>
+  </div>
+
+  <div id="prodLabelView" style="display:none;">
+    <div class="card">
+      <h3>Вставь состав с этикетки</h3>
+      <p class="muted" style="margin-bottom:10px;">Найдём скрытые молочные ингредиенты: сыворотку, казеинат, сухое молоко и другие.</p>
+      <textarea id="labelText" placeholder="Например: мука, сахар, сухое молоко 4%, какао-порошок, эмульгатор лецитин…"></textarea>
+      <button class="btn" id="analyzeBtn" style="margin-top:12px; margin-bottom:0;">Проверить состав</button>
+    </div>
+    <div id="labelResult"></div>
+  </div>
+
+  <div id="prodScanView" style="display:none;">
+    <div class="card">
+      <h3>Наведи камеру на штрихкод</h3>
+      <div id="scanViewport"><div class="scan-off">Камера выключена.<br>Нажми «Включить камеру» ниже.<br><span style="font-size:11px;">Нужен браузер с доступом к камерой (Chrome/Safari) и HTTPS или localhost.</span></div></div>
+      <button class="btn" id="camToggle">Включить камеру</button>
+      <div class="manual-row">
+        <input id="barcodeInput" inputmode="numeric" placeholder="Или введи код вручную, напр. 4607025392110" autocomplete="off">
+        <button class="icon-btn" id="manualLookup" title="Найти">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M11.5 3a8.5 8.5 0 1 1-5.39 15.06L2.86 21.14a1 1 0 0 1-1.41-1.41l3.07-3.07A8.5 8.5 0 0 1 11.5 3Zm0 1.8a6.7 6.7 0 1 0 0 13.4 6.7 6.7 0 0 0 0-13.4Z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="scanResult"></div>
+  </div>
+
+  <div class="disc">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M12 2.1a9.9 9.9 0 1 1 0 19.8 9.9 9.9 0 0 1 0-19.8Zm0 7.4c.5 0 .9.37.9.83v6.35a.9.9 0 0 1-1.8 0V10.33c0-.46.4-.83.9-.83Z" fill="currentColor"/></svg>
+    <span>Уровни — усреднённые данные для типичных продуктов. Точное содержание указано на этикетке конкретного продукта.</span>
+  </div>
+</section>
+
+<!-- ==================== ДНЕВНИК ==================== -->
+<section class="screen" id="s-diary">
+  <div class="hdr"><h1>Дневник питания</h1><p>Отмечай симптомы — найдём твой порог</p></div>
+
+  <div class="card">
+    <h3>Что съел и что чувствуешь?</h3>
+    <div class="search-bar" style="margin-bottom:12px;">
+      <input id="mealText" placeholder="Например: капучино на молоке" autocomplete="off" style="padding:11px 0;">
+    </div>
+    <div class="search-bar" style="margin-bottom:12px;">
+      <input id="enzymeDose" placeholder="Доза фермента, FCC (необязательно)" inputmode="numeric" autocomplete="off" style="padding:11px 0;">
+    </div>
+    <p class="muted" style="margin-bottom:8px;">Симптомы (через 30–120 минут)</p>
+    <div class="chips" id="symChips">
+      <button class="chip">Вздутие</button>
+      <button class="chip">Боль</button>
+      <button class="chip">Диарея</button>
+      <button class="chip">Тошнота</button>
+      <button class="chip">Норма</button>
+    </div>
+    <button class="btn" id="saveEntry">Записать</button>
+    <div id="entriesList"></div>
+  </div>
+
+  <div class="card">
+    <h3>Реакции за неделю</h3>
+    <p class="muted" style="margin-bottom:4px;">Сколько симптомов возникало по дням. Ниже столбиков — дни недели.</p>
+    <div class="chart-wrap" id="weekChart"></div>
+    <div class="muted" id="weekSummary" style="text-align:center; margin-top:8px;"></div>
+  </div>
+
+  <div class="disc">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M12 2.1a9.9 9.9 0 1 1 0 19.8 9.9 9.9 0 0 1 0-19.8Zm0 7.4c.5 0 .9.37.9.83v6.35a.9.9 0 0 1-1.8 0V10.33c0-.46.4-.83.9-.83Z" fill="currentColor"/></svg>
+    <span>Записи хранятся только на этом устройстве (в браузере). Данные никуда не отправляются.</span>
+  </div>
+</section>
+
+<!-- ==================== КАЛЬКУЛЯТОР ==================== -->
+<section class="screen" id="s-calc">
+  <div class="hdr"><h1>Калькулятор фермента</h1><p>Сколько лактазы принять перед едой</p></div>
+
+  <div class="card">
+    <h3>Сколько лактозы в блюде?</h3>
+    <p class="muted" style="margin-bottom:4px;">Подсказка: стакан молока ≈ 12 г, капучино ≈ 6 г, пицца с сыром ≈ 8–10 г</p>
+    <input type="range" id="lactRange" min="0" max="30" value="12" step="1">
+    <div class="calc-lbl" style="margin-bottom:4px;"><span id="gramsOut" style="font-weight:600;color:var(--text);">12</span> г лактозы</div>
+    <div class="calc-num" id="fccOut">5 400</div>
+    <div class="calc-lbl">единиц FCC лактазы<br>принять за 5–10 минут до еды</div>
+    <div class="chips" id="quickLact" style="margin-bottom:0;">
+      <button class="chip" data-g="6">Капучино · 6 г</button>
+      <button class="chip" data-g="12">Стакан молока · 12 г</button>
+      <button class="chip" data-g="20">Пицца 4 сыра · 20 г</button>
+    </div>
+  </div>
+
+  <div class="disc">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M12 2.1a9.9 9.9 0 1 1 0 19.8 9.9 9.9 0 0 1 0-19.8Zm0 7.4c.5 0 .9.37.9.83v6.35a.9.9 0 0 1-1.8 0V10.33c0-.46.4-.83.9-.83Z" fill="currentColor"/></svg>
+    <span>Ориентировочный расчёт: ~450 FCC на 1 г лактозы (среднее по инструкциям популярных препаратов). Доза индивидуальна — уточни у гастроэнтеролога и следуй инструкции к своему препарату.</span>
+  </div>
+</section>
+
+<!-- ==================== СПРАВОЧНИК ==================== -->
+<section class="screen" id="s-guide">
+  <div class="hdr"><h1>Справочник</h1><p>Альтернативы, кафе и памятки</p></div>
+
+  <p class="sec">Безопасные альтернативы</p>
+  <div class="card">
+    <div class="alt"><span class="dot dot0"></span><div class="grow">Безлактозное молоко</div><span class="muted">0 г</span></div>
+    <div class="alt"><span class="dot dot0"></span><div class="grow">Овсяный / соевый / миндальный напитки</div><span class="muted">0 г</span></div>
+    <div class="alt"><span class="dot dot0"></span><div class="grow">Твёрдые выдержанные сыры (пармезан, чеддер)</div><span class="muted">&lt;0,1 г</span></div>
+    <div class="alt"><span class="dot dot1"></span><div class="grow">Козий сыр молодой</div><span class="muted">~1 г</span></div>
+    <div class="alt"><span class="dot dot0"></span><div class="grow">Тофу твёрдый</div><span class="muted">0 г</span></div>
+    <div class="alt"><span class="dot dot0"></span><div class="grow">Кокосовые сливки</div><span class="muted">0 г</span></div>
+  </div>
+
+  <p class="sec">Карточка для официанта</p>
+  <div class="card">
+    <h3>Покажи в кафе или ресторане</h3>
+    <div class="lang-row">
+      <button class="sel" data-lang="ru">Русский</button>
+      <button data-lang="en">English</button>
+    </div>
+    <div class="card-text" id="waiterCard"></div>
+    <button class="btn ghost" id="copyCard">Скопировать текст</button>
+  </div>
+
+  <p class="sec">Важно знать</p>
+  <div class="card">
+    <h3>Непереносимость ≠ аллергия</h3>
+    <p class="muted" style="margin-bottom:8px;">Непереносимость лактозы — проблема пищеварения: дискомфорт зависит от количества съеденного. Аллергия на белок молока — реакция иммунной системы: возможны сыпь, отёк, удушье даже от капли. При подозрении на аллергию срочно обратись к врачу.</p>
+    <h3>Скрытые названия молока</h3>
+    <p class="muted">Сыворотка (в т.ч. сухая), казеин и казеинаты, сухое/обезжиренное молоко, молочный белок и жир, топлёное молоко, сливки, гхи. Проверяй состав этикетки во вкладке «Продукты».</p>
+  </div>
+
+  <div class="disc">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M12 2.1a9.9 9.9 0 1 1 0 19.8 9.9 9.9 0 0 1 0-19.8Zm0 7.4c.5 0 .9.37.9.83v6.35a.9.9 0 0 1-1.8 0V10.33c0-.46.4-.83.9-.83Z" fill="currentColor"/></svg>
+    <span>Если симптомы сильные, регулярные или появились впервые у ребёнка — обратись к гастроэнтерологу. Водородный дыхательный тест и генетический анализ помогут точно поставить диагноз.</span>
+  </div>
+</section>
+
+<!-- ==================== НАВИГАЦИЯ ==================== -->
+<nav class="nav">
+  <button class="on" data-go="s-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M17 3.8H7A3.2 3.2 0 0 0 3.8 7v8.76c0 .81.44 1.56 1.16 1.94l5 2.69a2.8 2.8 0 0 0 2.64 0l5-2.69a2.2 2.2 0 0 0 1.16-1.94V7A3.2 3.2 0 0 0 17 3.8ZM7 2a5 5 0 0 0-5 5v8.76a4 4 0 0 0 2.1 3.52l5 2.7a4.8 4.8 0 0 0 4.8 0l5-2.7a4 4 0 0 0 2.1-3.52V7a5 5 0 0 0-5-5H7Z" fill="currentColor"/></svg>Главная<span class="ind"></span></button>
+  <button data-go="s-prod"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M11.5 3a8.5 8.5 0 1 1-5.39 15.06L2.86 21.14a1 1 0 0 1-1.41-1.41l3.07-3.07A8.5 8.5 0 0 1 11.5 3Zm0 1.8a6.7 6.7 0 1 0 0 13.4 6.7 6.7 0 0 0 0-13.4Z" fill="currentColor"/></svg>Продукты<span class="ind"></span></button>
+  <button data-go="s-diary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.1 6c0-.5.4-.9.9-.9h14c.5 0 .9.4.9.9s-.4.9-.9.9H5a.9.9 0 0 1-.9-.9Zm0 6c0-.5.4-.9.9-.9h14c.5 0 .9.4.9.9s-.4.9-.9.9H5a.9.9 0 0 1-.9-.9Zm0 6c0-.5.4-.9.9-.9h14c.5 0 .9.4.9.9s-.4.9-.9.9H5a.9.9 0 0 1-.9-.9Z" fill="currentColor"/></svg>Дневник<span class="ind"></span></button>
+  <button data-go="s-calc"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M10.24 6.2c.47-2.4 3.65-2.97 4.92-.87a.9.9 0 0 1-1.54.93c-.41-.69-1.45-.5-1.61.28l-.38 1.97h1.71a.9.9 0 0 1 0 1.8h-2.06l-1.42 7.27c-.6 3.07-4.94 3.23-5.76.2a.9.9 0 1 1 1.74-.47c.32 1.18 2.02 1.12 2.26-.09l1.35-6.91H7.7a.9.9 0 0 1 0-1.8h2.09l.45-2.31Zm6.98 6.55a.9.9 0 0 1 1.27 1.27l-1.62 1.63 1.62 1.62a.9.9 0 1 1-1.27 1.27l-1.63-1.62-1.62 1.62a.9.9 0 1 1-1.27-1.27l1.62-1.62-1.62-1.63a.9.9 0 0 1 1.27-1.27l1.62 1.63 1.63-1.63Z" fill="currentColor"/></svg>Фермент<span class="ind"></span></button>
+  <button data-go="s-guide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2.1a9.9 9.9 0 1 1 0 19.8 9.9 9.9 0 0 1 0-19.8Zm0 7.4c.5 0 .9.37.9.83v6.35a.9.9 0 0 1-1.8 0V10.33c0-.46.4-.83.9-.83Z" fill="currentColor"/></svg>Ещё<span class="ind"></span></button>
+</nav>
+
+<script>
+
+/* ================= ДАННЫЕ ================= */
+var PRODUCTS = [
+  {n:"Молоко коровье 3,2%", lvl:3, g:"4,8 г/100 мл"},
+  {n:"Молоко безлактозное", lvl:0, g:"<0,1 г/100 мл"},
+  {n:"Овсяный напиток", lvl:0, g:"0 г"},
+  {n:"Соевый напиток", lvl:0, g:"0 г"},
+  {n:"Миндальный напиток", lvl:0, g:"0 г"},
+  {n:"Сливки 33%", lvl:3, g:"3,2 г/100 г"},
+  {n:"Сметана", lvl:2, g:"2,8 г/100 г"},
+  {n:"Творог 5%", lvl:2, g:"2,7 г/100 г"},
+  {n:"Йогурт натуральный", lvl:2, g:"3,5 г/100 г"},
+  {n:"Кефир", lvl:2, g:"3,8 г/100 мл"},
+  {n:"Мороженое сливочное", lvl:3, g:"6,5 г/100 г", h:"сухое молоко, сливки"},
+  {n:"Молочный шоколад", lvl:3, g:"9,5 г/100 г", h:"сухое молоко, сыворотка"},
+  {n:"Сыр твёрдый чеддер", lvl:0, g:"<0,1 г/100 г"},
+  {n:"Сыр твёрдый пармезан", lvl:0, g:"<0,1 г/100 г"},
+  {n:"Сыр плавленый", lvl:3, g:"7–14 г/100 г", h:"сухое молоко, сыворотка"},
+  {n:"Сыр мягкий (камамбер, бри)", lvl:1, g:"~0,1–1 г/100 г"},
+  {n:"Масло сливочное", lvl:1, g:"0,5–1 г/100 г"},
+  {n:"Топлёное масло (гхи)", lvl:0, g:"<0,1 г/100 г"},
+  {n:"Какао-порошок", lvl:2, g:"до 5 г/100 г (смотри состав)", h:"часто: сухое молоко"},
+  {n:"Белый хлеб", lvl:1, g:"до 2 г/100 г", h:"иногда: сухое молоко, сыворотка"},
+  {n:"Сдобная выпечка", lvl:2, g:"2–5 г/100 г", h:"часто: сливки, сухое молоко"},
+  {n:"Колбаса варёная", lvl:2, g:"до 3 г/100 г", h:"иногда: сухое молоко, лактоза"},
+  {n:"Протеиновый порошок", lvl:2, g:"зависит от типа", h:"избегай: концентрат сыворотки, казеинат"},
+  {n:"Маргарин", lvl:1, g:"0,5–2 г/100 г", h:"иногда: сухое молоко"}
+];
+var LVL_NAMES = ["Без лактозы","Низкий","Средний","Высокий"];
+var HIDDEN = {
+  "сыворотк":"сыворотка (молочный ингредиент)",
+  "казеин":"казеин / казеинат (молочный белок)",
+  "молок":"молоко (цельное, сухое или обезжиренное)",
+  "сливк":"сливки (молочный жир)",
+  "лактоз":"лактоза (молочный сахар)",
+  "гхи":"гхи / топлёное масло",
+  "молочн":"молочные компоненты"
+};
+var WAITER = {
+  ru: "Здравствуйте! У меня непереносимость лактозы (молочного сахара).\nПожалуйста, приготовьте моё блюдо БЕЗ:\n— молока, сливок, сыворотки,\n— сливочного масла, сметаны,\n— сыра и молочных соусов.\n\nМожно: растительное масло, оливковое масло, специи, овощи, мясо, рыбу, рис.\n\nЕсли в блюдо добавлен молочный продукт, сообщите мне, пожалуйста.\nСпасибо большое!",
+  en: "Hello! I have lactose intolerance (milk sugar).\nPlease prepare my meal WITHOUT:\n— milk, cream, whey,\n— butter, sour cream,\n— cheese and creamy sauces.\n\nSafe: olive/vegetable oil, spices, vegetables, meat, fish, rice.\n\nPlease let me know if the dish contains any dairy.\nThank you very much!"
+};
+
+/* ================= НАВИГАЦИЯ ================= */
+function go(id){
+  if(id !== 's-prod') stopScanner();
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.toggle('on', s.id===id); });
+  document.querySelectorAll('.nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.go===id); });
+  window.scrollTo({top:0});
+}
+document.querySelector('.nav').addEventListener('click', function(e){
+  var b = e.target.closest('button[data-go]'); if(b) go(b.dataset.go);
+});
+document.querySelectorAll('[data-go]').forEach(function(el){
+  el.addEventListener('click', function(){ go(el.dataset.go); });
+});
+document.getElementById('homeScan').addEventListener('click', function(){
+  go('s-prod'); switchProdTab('label'); document.getElementById('labelText').focus();
+});
+document.getElementById('homeSearch').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ go('s-prod'); switchProdTab('search');
+    document.getElementById('prodQuery').value = this.value; renderProducts(this.value); }
+});
+
+/* дата в шапке */
+(function(){
+  var d = new Date();
+  var days = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+  var months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  document.getElementById('todayDate').textContent =
+    days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()];
+})();
+
+/* ================= ПРОДУКТЫ ================= */
+function switchProdTab(mode){
+  document.getElementById('prodSearchView').style.display = mode==='search' ? '' : 'none';
+  document.getElementById('prodLabelView').style.display = mode==='label' ? '' : 'none';
+  document.getElementById('prodScanView').style.display = mode==='scan' ? '' : 'none';
+  document.getElementById('tabSearch').classList.toggle('sel', mode==='search');
+  document.getElementById('tabLabel').classList.toggle('sel', mode==='label');
+  document.getElementById('tabScan').classList.toggle('sel', mode==='scan');
+  if(mode!=='scan') stopScanner();
+}
+document.getElementById('tabSearch').addEventListener('click', function(){ switchProdTab('search'); });
+document.getElementById('tabLabel').addEventListener('click', function(){ switchProdTab('label'); });
+document.getElementById('tabScan').addEventListener('click', function(){ switchProdTab('scan'); });
+
+function renderProducts(q){
+  q = (q||'').trim().toLowerCase();
+  var list = q ? PRODUCTS.filter(function(p){ return p.n.toLowerCase().indexOf(q)>=0; }) : PRODUCTS;
+  var el = document.getElementById('prodList');
+  if(!list.length){ el.innerHTML = '<div class="empty">Ничего не нашлось. Попробуй проверить состав этикетки.</div>'; return; }
+  el.innerHTML = list.map(function(p){
+    var h = p.h ? '<span class="hidden-tag">Скрытое: ' + p.h + '</span>' : '';
+    return '<div class="card prod"><span class="dot dot' + p.lvl + '"></span><div class="grow">' +
+      '<div class="prod-name">' + p.n + '</div>' +
+      '<div class="prod-meta">лактоза ' + p.g + '</div>' + h + '</div>' +
+      '<span class="lvl-name lvl' + p.lvl + '">' + LVL_NAMES[p.lvl] + '</span></div>';
+  }).join('');
+}
+document.getElementById('prodQuery').addEventListener('input', function(){ renderProducts(this.value); });
+renderProducts('');
+
+/* ================= АНАЛИЗ СОСТАВА ================= */
+document.getElementById('analyzeBtn').addEventListener('click', function(){
+  var text = document.getElementById('labelText').value.toLowerCase();
+  var res = document.getElementById('labelResult');
+  if(!text.trim()){ res.innerHTML = '<div class="card"><div class="empty">Вставь состав с этикетки</div></div>'; return; }
+  var found = [];
+  Object.keys(HIDDEN).forEach(function(key){
+    if(text.indexOf(key)>=0) found.push(HIDDEN[key]);
+  });
+  /* подсветка слов */
+  var marked = document.getElementById('labelText').value;
+  Object.keys(HIDDEN).forEach(function(key){
+    marked = marked.replace(new RegExp('('+key+'\w*)','gi'), '<span class="found-word">$1</span>');
+  });
+  var html = '<div class="card"><h3>Разбор состава</h3><p style="font-size:13px;line-height:1.7;">' + marked + '</p>';
+  if(found.length){
+    html += '<div style="margin-top:10px;">' + found.map(function(f){
+      return '<div class="hidden-tag" style="margin-top:6px;">Найдено: ' + f + '</div>';
+    }).join('') + '</div>';
+  } else {
+    html += '<div class="ok-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19.3 5.9a1 1 0 0 1 1.41 1.42l-10.9 10.92a1 1 0 0 1-1.42 0L3.42 13.13a1 1 0 1 1 1.41-1.41l4.33 4.33L19.3 5.9Z" fill="currentColor"/></svg>Молочных ингредиентов не найдено</div>';
+  }
+  html += '</div>';
+  res.innerHTML = html;
+});
+
+/* ================= ДНЕВНИК ================= */
+var LS_KEY = 'lacto_diary_v1';
+var MEM_FALLBACK = null;
+var storageOK = (function(){
+  try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return true; }
+  catch(e){ return false; }
+})();
+function loadEntries(){
+  try {
+    var v = JSON.parse(localStorage.getItem(LS_KEY));
+    if(v) { MEM_FALLBACK = v; return v; }
+  } catch(e){}
+  return MEM_FALLBACK || [];
+}
+var storageWarned = false;
+function saveEntries(list){
+  MEM_FALLBACK = list;
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(list));
+  } catch(e) {
+    if(!storageWarned){
+      storageWarned = true;
+      alert('Браузер запретил сохранение данных (приватный режим или настройки). Записи будут жить только до закрытия вкладки.');
+    }
+  }
+}
+function esc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+document.querySelectorAll('#symChips .chip').forEach(function(c){
+  c.addEventListener('click', function(){ c.classList.toggle('sel'); });
+});
+
+document.getElementById('saveEntry').addEventListener('click', function(){
+  var meal = document.getElementById('mealText').value.trim();
+  var dose = document.getElementById('enzymeDose').value.trim();
+  var sel = document.querySelectorAll('#symChips .chip.sel');
+  if(!meal || !sel.length){
+    alert('Укажи, что съел, и отметь хотя бы один симптом (или «Норма»).'); return;
+  }
+  var syms = Array.prototype.map.call(sel, function(c){ return c.textContent; });
+  var entries = loadEntries();
+  entries.unshift({meal:meal, dose:dose, syms:syms, ts:Date.now()});
+  saveEntries(entries);
+  document.getElementById('mealText').value = '';
+  document.getElementById('enzymeDose').value = '';
+  sel.forEach(function(c){ c.classList.remove('sel'); });
+  renderDiary(); renderStats();
+});
+
+function renderDiary(){
+  var entries = loadEntries();
+  var el = document.getElementById('entriesList');
+  var home = document.getElementById('homeEntries');
+
+  function isReaction(e){
+    return e.syms.some(function(s){ return s !== 'Норма'; });
+  }
+  function row(e, i, withDel){
+    var d = new Date(e.ts);
+    var tm = d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+    var dose = e.dose ? ' · фермент ' + esc(e.dose) + ' FCC' : '';
+    var del = withDel ? '<button class="del" data-i="'+i+'" title="Удалить">×</button>' : '';
+    var react = isReaction(e);
+    var badge = react
+      ? '<span class="badge badge-hot">Реакция: ' + e.syms.filter(function(x){return x!=='Норма';}).map(esc).join(', ') + '</span>'
+      : '<span class="badge badge-ok">Без реакции</span>';
+    return '<div class="entry' + (react ? ' entry-hot' : '') + '">' +
+      '<span class="entry-dot ' + (react ? 'ed-hot' : 'ed-ok') + '"></span>' +
+      '<div style="flex:1;min-width:0;">' +
+      '<div class="entry-meal">' + esc(e.meal) + dose + '</div>' +
+      badge + '</div>' +
+      '<span class="tm">' + tm + '</span>' + del + '</div>';
+  }
+  function dayLabel(ts){
+    var d = new Date(ts), t = new Date();
+    var start = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    var diff = Math.round((start - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+    if(diff === 0) return 'Сегодня';
+    if(diff === 1) return 'Вчера';
+    return d.toLocaleDateString('ru-RU',{weekday:'long', day:'numeric', month:'long'});
+  }
+  /* группировка по дням */
+  var html = '', lastDay = null;
+  entries.forEach(function(e, i){
+    var lbl = dayLabel(e.ts);
+    if(lbl !== lastDay){
+      if(lastDay !== null) html += '<div style="height:4px"></div>';
+      html += '<div class="day-header">' + lbl + '</div>';
+      lastDay = lbl;
+    }
+    html += row(e, i, true);
+  });
+  el.innerHTML = entries.length ? html : '<div class="empty">Пока пусто. Первая запись поможет понять твой порог.</div>';
+  home.innerHTML = entries.length
+    ? entries.slice(0,3).map(function(e,i){ return row(e,i,false); }).join('')
+    : '<div class="empty">Пока пусто — добавь первую запись</div>';
+
+  renderWeekChart();
+}
+document.getElementById('entriesList').addEventListener('click', function(e){
+  var b = e.target.closest('.del'); if(!b) return;
+  var entries = loadEntries(); entries.splice(+b.dataset.i, 1);
+  saveEntries(entries); renderDiary(); renderStats();
+});
+
+/* ================= СТАТИСТИКА ================= */
+function renderStats(){
+  var entries = loadEntries();
+  var reactions = entries.filter(function(e){
+    return e.syms.some(function(s){ return s!=='Норма'; });
+  }).length;
+  var ok = entries.length - reactions;
+  function plural(n, one, few, many){
+    var m = n % 10, h = n % 100;
+    if(m === 1 && h !== 11) return one;
+    if(m >= 2 && m <= 4 && (h < 12 || h > 14)) return few;
+    return many;
+  }
+  document.getElementById('statLine').textContent =
+    entries.length + ' ' + plural(entries.length,'запись','записи','записей') +
+    ' · ' + ok + ' ' + plural(ok,'без реакций','без реакций','без реакций') +
+    ' · ' + reactions + ' ' + plural(reactions,'реакция','реакции','реакций');
+}
+
+
+/* ================= СКАНЕР ШТРИХКОДОВ ================= */
+var scannerOn = false, quaggaLoaded = false, quaggaLoading = false, lastCode = '';
+
+function loadQuagga(cb){
+  if(window.Quagga){ cb(); return; }
+  if(quaggaLoading){ var t=setInterval(function(){ if(window.Quagga){ clearInterval(t); cb(); } },200); return; }
+  quaggaLoading = true;
+  var sc = document.createElement('script');
+  sc.src = 'https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js';
+  sc.onload = function(){ quaggaLoaded = true; cb(); };
+  sc.onerror = function(){ quaggaLoading = false; alert('Не удалось загрузить сканер. Проверь интернет или введи код вручную.'); };
+  document.head.appendChild(sc);
+}
+
+function startScanner(){
+  loadQuagga(function(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      alert('Камера недоступна в этом браузере. Введи код вручную.'); return;
+    }
+    var vp = document.getElementById('scanViewport');
+    vp.innerHTML = '<div id="qvp" style="position:absolute;inset:0;"></div><div class="laser"></div><div class="hint">Наведи на штрихкод — распознаю сам</div>';
+    Quagga.init({
+      inputStream: { name:'live', type:'LiveStream', target: document.getElementById('qvp'),
+                     constraints: { facingMode:'environment' } },
+      decoder: { readers: ['ean_reader','ean_8_reader','upc_reader','code_128_reader'] },
+      locate: true
+    }, function(err){
+      if(err){ vp.innerHTML = '<div class="scan-off">Не получилось запустить камеру.<br>'+esc(String(err))+'<br>Можно ввести код вручную.</div>'; return; }
+      Quagga.start();
+      scannerOn = true;
+      document.getElementById('camToggle').textContent = 'Выключить камеру';
+    });
+    Quagga.offDetected();
+    Quagga.onDetected(function(res){
+      var code = res.codeResult.code;
+      if(code === lastCode) return;
+      lastCode = code;
+      stopScanner();
+      lookupBarcode(code);
+      setTimeout(function(){ lastCode=''; }, 3000);
+    });
+  });
+}
+function stopScanner(){
+  if(window.Quagga && scannerOn){ try{ Quagga.stop(); }catch(e){} }
+  scannerOn = false;
+  var btn = document.getElementById('camToggle');
+  if(btn) btn.textContent = 'Включить камеру';
+}
+document.getElementById('camToggle').addEventListener('click', function(){
+  if(scannerOn){ stopScanner(); document.getElementById('scanViewport').innerHTML = '<div class="scan-off">Камера выключена.</div>'; }
+  else startScanner();
+});
+document.getElementById('manualLookup').addEventListener('click', function(){
+  var code = document.getElementById('barcodeInput').value.replace(/\D/g,'');
+  if(code.length < 6){ alert('Введи корректный штрихкод (цифры).'); return; }
+  lookupBarcode(code);
+});
+
+/* ---- Open Food Facts ---- */
+function lookupBarcode(code){
+  var res = document.getElementById('scanResult');
+  res.innerHTML = '<div class="card"><div class="empty">Ищу продукт в базе Open Food Facts…</div></div>';
+  fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) + '.json?fields=product_name,ingredients_text,allergens_tags,categories_tags,nutriments,image_front_small_url')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.status !== 1 || !data.product){
+        res.innerHTML = '<div class="card"><div class="empty">Продукт с кодом ' + esc(code) + ' не найден в базе. Проверь состав вручную во вкладке «Состав этикетки».</div></div>';
+        return;
+      }
+      res.innerHTML = renderOffResult(data.product, code);
+    })
+    .catch(function(){
+      res.innerHTML = '<div class="card"><div class="empty">Нет соединения с базой. Попробуй позже или введи состав вручную.</div></div>';
+    });
+}
+
+function renderOffResult(prod, code){
+  var name = prod.product_name || 'Продукт без названия';
+  var ingr = (prod.ingredients_text || '').toLowerCase();
+  var allerg = (prod.allergens_tags || []).join(' ');
+  var cats = (prod.categories_tags || []).join(' ');
+  var nutri = prod.nutriments || {};
+  var hasMilk = allerg.indexOf('milk') >= 0 || ingr.indexOf('молок') >= 0 || ingr.indexOf('молочн') >= 0
+             || ingr.indexOf('сливк') >= 0 || ingr.indexOf('сыворотк') >= 0 || ingr.indexOf('казеин') >= 0
+             || ingr.indexOf('lactose') >= 0 || ingr.indexOf('milk') >= 0;
+
+  /* скрытые молочные слова */
+  var found = [];
+  Object.keys(HIDDEN).forEach(function(key){
+    if(ingr.indexOf(key) >= 0) found.push(HIDDEN[key]);
+  });
+
+  /* эвристика уровня лактозы */
+  var lvl, g;
+  if(nutri.lactose_100g != null){
+    var lg = +nutri.lactose_100g;
+    g = String(lg).replace('.', ',') + ' г/100 г (с этикетки)';
+    lvl = lg <= 0.1 ? 0 : lg <= 2 ? 1 : lg <= 5 ? 2 : 3;
+  } else if(!hasMilk){
+    lvl = 0; g = 'молочные ингредиенты не найдены';
+  } else if(cats.indexOf('hard-cheese') >= 0 || cats.indexOf('parmesan') >= 0 || cats.indexOf('aged-cheddar') >= 0 || cats.indexOf('ghee') >= 0){
+    lvl = 0; g = 'выдержанный продукт, лактозы практически нет';
+  } else if(cats.indexOf('butter') >= 0 || cats.indexOf('butterfat') >= 0){
+    lvl = 1; g = 'примерно 0,5–1 г/100 г';
+  } else if(cats.indexOf('chocolate') >= 0){
+    lvl = 3; g = 'молочный шоколад: до 9–10 г/100 г';
+  } else if(cats.indexOf('ice-cream') >= 0 || cats.indexOf('yogurt') >= 0 || cats.indexOf('kefir') >= 0 || cats.indexOf('fermented') >= 0){
+    lvl = 2; g = 'примерно 3–6 г/100 г';
+  } else if(cats.indexOf('milk') >= 0 || cats.indexOf('cream') >= 0){
+    lvl = 3; g = 'примерно 4–5 г/100 г';
+  } else {
+    lvl = 2; g = 'содержит молочные компоненты, точное количество не указано';
+  }
+
+  var html = '<div class="card"><div class="prod">';
+  if(prod.image_front_small_url){
+    html += '<img src="' + prod.image_front_small_url + '" alt="" style="width:52px;height:52px;object-fit:contain;border-radius:8px;border:1px solid var(--border);">';
+  }
+  html += '<div class="grow"><div class="prod-name">' + esc(name) + '</div>' +
+    '<div class="prod-meta">код ' + esc(code) + ' · Open Food Facts</div></div>' +
+    '<span class="lvl-name lvl' + lvl + '">' + LVL_NAMES[lvl] + '</span></div>';
+  html += '<div class="prod-meta" style="margin-top:8px;">лактоза: ' + esc(g) + '</div>';
+  if(found.length){
+    html += '<div style="margin-top:8px;">' + found.map(function(f){ return '<span class="hidden-tag" style="margin:4px 4px 0 0;">' + esc(f) + '</span>'; }).join('') + '</div>';
+  }
+  if(lvl > 0){
+    html += '<button class="btn ghost" style="margin-top:10px; margin-bottom:0;" id="toCalcFromScan">Рассчитать фермент для этого</button>';
+  }
+  html += '</div>';
+  setTimeout(function(){
+    var b = document.getElementById('toCalcFromScan');
+    if(b) b.addEventListener('click', function(){ go('s-calc'); });
+  }, 0);
+  return html;
+}
+
+/* ================= ГРАФИК РЕАКЦИЙ ================= */
+function renderWeekChart(){
+  var el = document.getElementById('weekChart');
+  var entries = loadEntries();
+  var days = [], now = new Date();
+  for(var i = 6; i >= 0; i--){
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    var count = 0;
+    entries.forEach(function(e){
+      var ed = new Date(e.ts);
+      if(ed.getFullYear()===d.getFullYear() && ed.getMonth()===d.getMonth() && ed.getDate()===d.getDate()){
+        count += e.syms.filter(function(s){ return s !== 'Норма'; }).length;
+      }
+    });
+    days.push({label: d.toLocaleDateString('ru-RU',{weekday:'short'}), count: count});
+  }
+  var max = Math.max.apply(null, days.map(function(d){ return d.count; }).concat([1]));
+  el.innerHTML = days.map(function(d){
+    var h = Math.round(d.count / max * 88) + 4;
+    return '<div class="chart-col">' +
+      '<span class="chart-val">' + (d.count || '') + '</span>' +
+      '<div class="chart-bar' + (d.count > 0 ? ' hot' : '') + '" style="height:' + h + 'px;"></div>' +
+      '<span class="chart-day">' + d.label + '</span></div>';
+  }).join('');
+  var hotDays = days.filter(function(d){ return d.count > 0; }).length;
+  var sumEl = document.getElementById('weekSummary');
+  if(sumEl) sumEl.textContent = hotDays === 0
+    ? 'За неделю реакций не было — отличный результат'
+    : 'Дней с реакциями: ' + hotDays + ' из 7 · всего симптомов: ' +
+      days.reduce(function(a,d){ return a + d.count; }, 0);
+}
+
+/* ================= КАЛЬКУЛЯТОР ================= */
+var lact = document.getElementById('lactRange');
+function calcFcc(){
+  var g = +lact.value;
+  document.getElementById('gramsOut').textContent = g;
+  document.getElementById('fccOut').textContent = (g*450).toLocaleString('ru-RU');
+}
+lact.addEventListener('input', calcFcc); calcFcc();
+document.querySelectorAll('#quickLact .chip').forEach(function(c){
+  c.addEventListener('click', function(){
+    lact.value = c.dataset.g; calcFcc();
+    document.querySelectorAll('#quickLact .chip').forEach(function(x){ x.classList.remove('sel'); });
+    c.classList.add('sel');
+  });
+});
+
+/* ================= КАРТОЧКА ОФИЦИАНТУ ================= */
+var curLang = 'ru';
+function renderCard(){ document.getElementById('waiterCard').textContent = WAITER[curLang]; }
+document.querySelectorAll('.lang-row button').forEach(function(b){
+  b.addEventListener('click', function(){
+    curLang = b.dataset.lang; renderCard();
+    document.querySelectorAll('.lang-row button').forEach(function(x){ x.classList.toggle('sel', x===b); });
+  });
+});
+renderCard();
+document.getElementById('copyCard').addEventListener('click', function(){
+  var txt = WAITER[curLang];
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ alert('Скопировано — покажи официанту'); });
+  } else {
+    var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove(); alert('Скопировано — покажи официанту');
+  }
+});
+
+/* ================= ИНИЦИАЛИЗАЦИЯ ================= */
+renderDiary(); renderStats(); renderWeekChart();
+</script>
+</body>
+</html>
